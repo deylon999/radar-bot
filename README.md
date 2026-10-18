@@ -21,3 +21,8 @@ make run
 | `LOG_LEVEL` | `info`                  | `debug`, `info`, `warn`, `error`         |
 
 Договор с бэкендом — `docs/bot-api.md` в репозитории `radar-web`.
+
+## Без бэкенда
+
+Пока бэкенда нет, бот ходит в заглушку `internal/backend/fake.go`. Проверить привязку можно
+ссылками `https://t.me/<бот>?start=valid-code`, `expired-code` и `used-code`.

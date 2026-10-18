@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/go-telegram/bot"
 
+	"github.com/deylon999/radar-bot/internal/backend"
 	"github.com/deylon999/radar-bot/internal/config"
 	"github.com/deylon999/radar-bot/internal/telegram"
 )
@@ -31,7 +33,8 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	handlers := telegram.NewHandlers(cfg.SiteURL, log)
+	client := backend.NewFake(time.Now)
+	handlers := telegram.NewHandlers(client, cfg.SiteURL, log)
 
 	b, err := bot.New(cfg.BotToken, bot.WithDefaultHandler(handlers.Default))
 	if err != nil {
