@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -79,5 +80,66 @@ func TestSenderRejectsEmptyPayload(t *testing.T) {
 	d := backend.Delivery{ID: "d-3", ChatID: 42, Kind: backend.DeliveryUrgent}
 	if err := s.Send(context.Background(), d); err == nil {
 		t.Error("want error for urgent delivery without insight")
+	}
+}
+
+func newTestSender(t *testing.T, serverURL string) (*Sender, *[]time.Duration) {
+	t.Helper()
+
+	s := NewSender(newBot(t, serverURL), "https://radar.example")
+	var sleeps []time.Duration
+	s.sleep = func(_ context.Context, d time.Duration) error {
+		sleeps = append(sleeps, d)
+		return nil
+	}
+	s.limit.sleep = func(context.Context, time.Duration) error { return nil }
+	return s, &sleeps
+}
+
+func TestSenderWaitsRetryAfterOnTooManyRequests(t *testing.T) {
+	tg, serverURL := newFakeTelegram(t)
+	tg.failures = []int{http.StatusTooManyRequests}
+	s, sleeps := newTestSender(t, serverURL)
+
+	if err := s.Send(context.Background(), urgentDelivery); err != nil {
+		t.Fatal(err)
+	}
+
+	if tg.requests != 2 || len(tg.sent) != 1 {
+		t.Errorf("requests = %d, sent = %d", tg.requests, len(tg.sent))
+	}
+	if !slices.Equal(*sleeps, []time.Duration{2 * time.Second}) {
+		t.Errorf("sleeps = %v, want [2s]", *sleeps)
+	}
+}
+
+func TestSenderGivesUpAfterRetries(t *testing.T) {
+	tg, serverURL := newFakeTelegram(t)
+	tg.errorCode = http.StatusBadGateway
+	s, sleeps := newTestSender(t, serverURL)
+
+	if err := s.Send(context.Background(), urgentDelivery); err == nil {
+		t.Fatal("want error after retries")
+	}
+
+	if tg.requests != maxRetries+1 {
+		t.Errorf("requests = %d, want %d", tg.requests, maxRetries+1)
+	}
+	want := []time.Duration{time.Second, 2 * time.Second, 4 * time.Second}
+	if !slices.Equal(*sleeps, want) {
+		t.Errorf("sleeps = %v, want %v", *sleeps, want)
+	}
+}
+
+func TestSenderDoesNotRetryBadRequest(t *testing.T) {
+	tg, serverURL := newFakeTelegram(t)
+	tg.errorCode = http.StatusBadRequest
+	s, _ := newTestSender(t, serverURL)
+
+	if err := s.Send(context.Background(), urgentDelivery); err == nil {
+		t.Fatal("want error")
+	}
+	if tg.requests != 1 {
+		t.Errorf("requests = %d, want 1", tg.requests)
 	}
 }

@@ -15,17 +15,27 @@ import (
 type fakeTelegram struct {
 	mu        sync.Mutex
 	sent      []url.Values
+	requests  int
 	errorCode int
+	failures  []int
 }
 
 func (f *fakeTelegram) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if f.errorCode != 0 {
-		w.WriteHeader(f.errorCode)
+	f.requests++
+	code := f.errorCode
+	if len(f.failures) > 0 {
+		code, f.failures = f.failures[0], f.failures[1:]
+	}
+	if code != 0 {
+		w.WriteHeader(code)
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"ok": false, "error_code": f.errorCode, "description": http.StatusText(f.errorCode),
+			"ok":          false,
+			"error_code":  code,
+			"description": http.StatusText(code),
+			"parameters":  map[string]any{"retry_after": 2},
 		})
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"net/url"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -16,14 +17,24 @@ import (
 
 var _ delivery.Sender = (*Sender)(nil)
 
+const maxRetries = 3
+
 type Sender struct {
 	bot     *bot.Bot
 	siteURL string
 	buttons bool
+	limit   *limiter
+	sleep   func(context.Context, time.Duration) error
 }
 
 func NewSender(b *bot.Bot, siteURL string) *Sender {
-	return &Sender{bot: b, siteURL: siteURL, buttons: isPublicURL(siteURL)}
+	return &Sender{
+		bot:     b,
+		siteURL: siteURL,
+		buttons: isPublicURL(siteURL),
+		limit:   newLimiter(),
+		sleep:   sleep,
+	}
 }
 
 func (s *Sender) Send(ctx context.Context, d backend.Delivery) error {
@@ -46,11 +57,47 @@ func (s *Sender) Send(ctx context.Context, d backend.Delivery) error {
 		params.Text += "\n\n" + html.EscapeString(msg.linkURL)
 	}
 
-	_, err = s.bot.SendMessage(ctx, params)
-	if errors.Is(err, bot.ErrorForbidden) {
-		return fmt.Errorf("%w: %v", delivery.ErrBlocked, err)
+	for attempt := 0; ; attempt++ {
+		if err := s.limit.wait(ctx, d.ChatID); err != nil {
+			return err
+		}
+
+		_, err = s.bot.SendMessage(ctx, params)
+		if errors.Is(err, bot.ErrorForbidden) {
+			return fmt.Errorf("%w: %v", delivery.ErrBlocked, err)
+		}
+
+		delay, ok := retryDelay(err, attempt)
+		if !ok || ctx.Err() != nil {
+			return err
+		}
+		if err := s.sleep(ctx, delay); err != nil {
+			return err
+		}
 	}
-	return err
+}
+
+func retryDelay(err error, attempt int) (time.Duration, bool) {
+	if err == nil || attempt >= maxRetries {
+		return 0, false
+	}
+
+	var tooMany *bot.TooManyRequestsError
+	if errors.As(err, &tooMany) {
+		return max(time.Duration(tooMany.RetryAfter)*time.Second, time.Second), true
+	}
+
+	var migrate *bot.MigrateError
+	if errors.As(err, &migrate) {
+		return 0, false
+	}
+	for _, permanent := range []error{bot.ErrorBadRequest, bot.ErrorUnauthorized, bot.ErrorNotFound, bot.ErrorConflict} {
+		if errors.Is(err, permanent) {
+			return 0, false
+		}
+	}
+
+	return time.Second << attempt, true
 }
 
 func (s *Sender) compose(d backend.Delivery) (message, error) {
