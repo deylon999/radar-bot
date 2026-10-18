@@ -12,6 +12,7 @@ import (
 
 	"github.com/deylon999/radar-bot/internal/backend"
 	"github.com/deylon999/radar-bot/internal/config"
+	"github.com/deylon999/radar-bot/internal/delivery"
 	"github.com/deylon999/radar-bot/internal/telegram"
 )
 
@@ -42,8 +43,16 @@ func run() error {
 	}
 	handlers.Register(b)
 
+	poller := delivery.NewPoller(client, telegram.NewSender(b, cfg.SiteURL), 10*time.Second, log)
+	polled := make(chan struct{})
+	go func() {
+		defer close(polled)
+		poller.Run(ctx)
+	}()
+
 	log.Info("bot started")
 	b.Start(ctx)
+	<-polled
 	log.Info("bot stopped")
 
 	return nil
