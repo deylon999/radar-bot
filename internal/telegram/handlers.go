@@ -30,10 +30,10 @@ func NewHandlers(client backend.Client, siteURL string, log *slog.Logger) *Handl
 }
 
 func (h *Handlers) Register(b *bot.Bot) {
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypeCommandStartOnly, h.start)
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/status", bot.MatchTypeCommandStartOnly, h.status)
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/stop", bot.MatchTypeCommandStartOnly, h.stop)
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/help", bot.MatchTypeCommandStartOnly, h.help)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "start", bot.MatchTypeCommandStartOnly, h.start)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "status", bot.MatchTypeCommandStartOnly, h.status)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "stop", bot.MatchTypeCommandStartOnly, h.stop)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "help", bot.MatchTypeCommandStartOnly, h.help)
 }
 
 func (h *Handlers) Default(ctx context.Context, b *bot.Bot, update *models.Update) {
