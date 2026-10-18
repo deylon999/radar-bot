@@ -26,6 +26,9 @@ func main() {
 }
 
 func run() error {
+	if err := config.LoadDotEnv(".env"); err != nil {
+		return err
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		return err

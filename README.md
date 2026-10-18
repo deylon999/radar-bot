@@ -6,18 +6,10 @@ Telegram-бот «Радара»: привязка аккаунта и увед�
 
 ```sh
 cp .env.example .env   # вписать BOT_TOKEN от @BotFather
-set -a && . ./.env && set +a
-make run
-```
-
-В PowerShell вместо `set -a`:
-
-```powershell
-Get-Content .env | ForEach-Object {
-  if ($_ -match '^\s*([^#=]+?)\s*=\s*(.*)$') { Set-Item "env:$($matches[1])" $matches[2] }
-}
 go run ./cmd/bot
 ```
+
+Бот сам читает `.env` из текущей папки. Переменные, уже заданные в окружении, важнее файла.
 
 Нужен Go 1.24+.
 
@@ -40,16 +32,16 @@ go run ./cmd/bot
 Пока бэкенда нет, бот ходит в заглушку `internal/backend/fake.go`. Проверить привязку можно
 ссылками `https://t.me/<бот>?start=valid-code`, `expired-code` и `used-code`.
 
-Прислать себе уведомление (нужен `DEV_ADDR=localhost:8081` и привязанный чат):
+Прислать себе уведомление (нужен `DEV_ADDR=127.0.0.1:8081` и привязанный чат):
 
 ```sh
-curl -X POST localhost:8081/dev/deliveries                         # срочный инсайт
-curl -X POST localhost:8081/dev/deliveries -d '{"kind":"digest"}'  # сводка
+curl -X POST 127.0.0.1:8081/dev/deliveries                         # срочный инсайт
+curl -X POST 127.0.0.1:8081/dev/deliveries -d '{"kind":"digest"}'  # сводка
 ```
 
 ```powershell
-Invoke-RestMethod -Method Post http://localhost:8081/dev/deliveries
-Invoke-RestMethod -Method Post http://localhost:8081/dev/deliveries -Body '{"kind":"digest"}'
+Invoke-RestMethod -Method Post http://127.0.0.1:8081/dev/deliveries
+Invoke-RestMethod -Method Post http://127.0.0.1:8081/dev/deliveries -Body '{"kind":"digest"}'
 ```
 
 В теле можно передать свой `insight` или `digest` в формате `docs/bot-api.md`, а `chatId` —
