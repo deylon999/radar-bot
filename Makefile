@@ -1,4 +1,4 @@
-.PHONY: run build test lint
+.PHONY: run build test lint docker
 
 run:
 	go run ./cmd/bot
@@ -12,3 +12,6 @@ test:
 lint:
 	go vet ./...
 	test -z "$$(gofmt -l .)"
+
+docker:
+	docker build -t radar-bot .

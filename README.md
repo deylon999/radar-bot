@@ -13,6 +13,29 @@ go run ./cmd/bot
 
 Нужен Go 1.24+.
 
+## Docker
+
+```sh
+docker compose up -d --build   # собрать и запустить в фоне
+docker compose logs -f         # логи
+docker compose down            # остановить
+```
+
+Переменные берутся из `.env` рядом с `compose.yaml`; в образ файл не попадает. Образ — около
+16 МБ: статический бинарник в `distroless/static`, процесс работает не от root. Без Compose:
+
+```sh
+docker build -t radar-bot .
+docker run -d --restart unless-stopped --env-file .env radar-bot
+```
+
+Боту не нужен входящий порт: он сам ходит в Telegram и в бэкенд. На сервер достаточно Docker
+и доступа наружу к `api.telegram.org`. Запускайте одну копию: две копии с одним токеном мешают
+друг другу получать сообщения.
+
+`POST /dev/deliveries` в контейнере — только для отладки: `DEV_ADDR=0.0.0.0:8081` и
+`-p 127.0.0.1:8081:8081`. На сервере оставьте `DEV_ADDR` пустым.
+
 ## Переменные окружения
 
 | Переменная  | По умолчанию            | Что это                                             |
