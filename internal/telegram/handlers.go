@@ -28,7 +28,6 @@ func (h *Handlers) Register(b *bot.Bot) {
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/help", bot.MatchTypeCommandStartOnly, h.help)
 }
 
-// Default answers everything the bot doesn't recognise.
 func (h *Handlers) Default(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if update.Message == nil {
 		return
@@ -46,7 +45,6 @@ func (h *Handlers) start(ctx context.Context, b *bot.Bot, update *models.Update)
 		return
 	}
 
-	// TODO: confirm the code with the backend and bind the chat.
 	h.log.Info("link requested", "chat_id", chatID, "code", code)
 	h.reply(ctx, b, chatID, "Привязка скоро заработает.")
 }
@@ -62,7 +60,6 @@ func (h *Handlers) reply(ctx context.Context, b *bot.Bot, chatID int64, text str
 	}
 }
 
-// startPayload returns the deep-link parameter from "/start <payload>".
 func startPayload(text string) string {
 	_, payload, _ := strings.Cut(strings.TrimSpace(text), " ")
 	return strings.TrimSpace(payload)
