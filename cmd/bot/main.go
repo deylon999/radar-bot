@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/deylon999/radar-bot/internal/backend"
 	"github.com/deylon999/radar-bot/internal/config"
 	"github.com/deylon999/radar-bot/internal/delivery"
+	"github.com/deylon999/radar-bot/internal/devapi"
 	"github.com/deylon999/radar-bot/internal/telegram"
 )
 
@@ -44,15 +46,29 @@ func run() error {
 	handlers.Register(b)
 
 	poller := delivery.NewPoller(client, telegram.NewSender(b, cfg.SiteURL), 10*time.Second, log)
-	polled := make(chan struct{})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		defer close(polled)
+		defer wg.Done()
 		poller.Run(ctx)
 	}()
 
+	if cfg.DevAddr != "" {
+		dev := devapi.New(client, time.Now, log)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := dev.ListenAndServe(ctx, cfg.DevAddr); err != nil {
+				log.Error("dev api stopped", "err", err)
+				stop()
+			}
+		}()
+	}
+
 	log.Info("bot started")
 	b.Start(ctx)
-	<-polled
+	wg.Wait()
 	log.Info("bot stopped")
 
 	return nil

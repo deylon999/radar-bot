@@ -18,9 +18,19 @@ func TestLoad(t *testing.T) {
 			want: Config{BotToken: "123:abc", SiteURL: "http://localhost:5173", LogLevel: slog.LevelInfo},
 		},
 		{
-			name: "trims trailing slash",
-			env:  map[string]string{"BOT_TOKEN": "123:abc", "SITE_URL": "https://radar.vercel.app/", "LOG_LEVEL": "debug"},
-			want: Config{BotToken: "123:abc", SiteURL: "https://radar.vercel.app", LogLevel: slog.LevelDebug},
+			name: "all set, trailing slash trimmed",
+			env: map[string]string{
+				"BOT_TOKEN": "123:abc",
+				"SITE_URL":  "https://radar.vercel.app/",
+				"LOG_LEVEL": "debug",
+				"DEV_ADDR":  "localhost:8081",
+			},
+			want: Config{
+				BotToken: "123:abc",
+				SiteURL:  "https://radar.vercel.app",
+				LogLevel: slog.LevelDebug,
+				DevAddr:  "localhost:8081",
+			},
 		},
 		{name: "no token", env: map[string]string{}, wantErr: true},
 		{name: "relative site url", env: map[string]string{"BOT_TOKEN": "x", "SITE_URL": "radar.app"}, wantErr: true},
@@ -29,7 +39,7 @@ func TestLoad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, key := range []string{"BOT_TOKEN", "SITE_URL", "LOG_LEVEL"} {
+			for _, key := range []string{"BOT_TOKEN", "SITE_URL", "LOG_LEVEL", "DEV_ADDR"} {
 				t.Setenv(key, tt.env[key])
 			}
 

@@ -13,12 +13,14 @@ type Config struct {
 	BotToken string
 	SiteURL  string
 	LogLevel slog.Level
+	DevAddr  string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
 		BotToken: os.Getenv("BOT_TOKEN"),
 		SiteURL:  strings.TrimRight(getenv("SITE_URL", "http://localhost:5173"), "/"),
+		DevAddr:  os.Getenv("DEV_ADDR"),
 	}
 
 	if cfg.BotToken == "" {

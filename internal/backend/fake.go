@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 )
@@ -122,6 +123,18 @@ func (f *Fake) Ack(_ context.Context, deliveryID string, status AckStatus, _ str
 		return nil
 	}
 	return fmt.Errorf("delivery %q not found", deliveryID)
+}
+
+func (f *Fake) LinkedChats() []int64 {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	ids := make([]int64, 0, len(f.chats))
+	for id := range f.chats {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	return ids
 }
 
 func (f *Fake) Enqueue(d Delivery) Delivery {
